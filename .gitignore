@@ -1,2 +1,4 @@
 *.vagrant
 /keys.json
+/final-project.pdf
+*.env

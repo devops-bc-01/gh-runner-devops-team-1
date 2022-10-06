@@ -50,5 +50,34 @@ Vagrant.configure("2") do |config|
     end
   end
 
+  # PODMAN
+  vm_podman = parameters['vm_podman']
+  (1..vm_podman['node_count']).each do |i|
+    config.vm.define "podman-#{i}" do |podmanConfig|
+      podmanConfig.vm.box = vm_podman['image']
+      podmanConfig.vm.hostname = "devops-runner-team-1-#{i}"
+      podmanConfig.vm.synced_folder ".", "/vagrant"
+      
+      podmanConfig.vm.provider :virtualbox do |vb|
+        vb.gui = false
+        vb.memory = vm_podman['ram']
+        vb.cpus = vm_podman['cpus']
+
+      end
+
+      podmanConfig.vm.provision :docker
+      #podmanConfig.vm.provision :podman
+      podmanConfig.vm.provision :docker_compose
+
+      podmanConfig.vm.provision "shell", inline: <<-SHELL
+        sudo apt-get install -y podman
+      SHELL
+
+      podmanConfig.vm.provision "sonarqube", type: "shell" do |s|
+        s.path= "sonarqube.sh"
+      end
+    end
+  end
+
 
 end
