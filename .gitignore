@@ -1,2 +1,6 @@
 *.vagrant
 /keys.json
+/final-project.pdf
+*.env
+/.config
+/.local
