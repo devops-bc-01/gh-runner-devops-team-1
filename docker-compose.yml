@@ -1,0 +1,35 @@
+# docker-compose.yaml
+version: "3.7"
+
+networks:
+  team-1-network:
+
+services:
+  #Jenkins
+  jenkins:
+    image: jenkins/jenkins:lts
+    privileged: true
+    user: root
+    container_name: jenkins
+    volumes:
+      - /home/vagrant/jenkins_compose/jenkins_configuration:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - 8086:8080
+      - 8087:50000
+    networks:
+      - team-1-network
+    restart: on-failure
+    
+  #Sonatype/Nexus
+  nexus:
+    image: sonatype/nexus3
+    volumes:
+      - ./nexus:/nexus-data
+    ports:
+      - 8088:8081
+    networks:
+      - team-1-network
+    restart: on-failure
+        
+    
