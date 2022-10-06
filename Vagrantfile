@@ -53,16 +53,20 @@ Vagrant.configure("2") do |config|
   # PODMAN
   vm_podman = parameters['vm_podman']
   (1..vm_podman['node_count']).each do |i|
+    config.vm.network :forwarded_port, host: 9000, guest: 8080 # For Sonarqube -> docker-compose.yml for 
+    config.vm.network :forwarded_port, host: 9001, guest: 8081 # For Portainer -> docker-compose.yml for 
+    
     config.vm.define "podman-#{i}" do |podmanConfig|
       podmanConfig.vm.box = vm_podman['image']
       podmanConfig.vm.hostname = "devops-runner-team-1-#{i}"
-      podmanConfig.vm.synced_folder ".", "/vagrant"
+      # TODO show alternatives of /home/vagrant
+      podmanConfig.vm.synced_folder ".", "/home/vagrant"
       
       podmanConfig.vm.provider :virtualbox do |vb|
         vb.gui = false
         vb.memory = vm_podman['ram']
         vb.cpus = vm_podman['cpus']
-
+        vb.customize ['modifyvm', :id, '--nested-hw-virt', 'on']
       end
 
       podmanConfig.vm.provision :docker
