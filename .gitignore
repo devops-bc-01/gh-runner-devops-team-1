@@ -8,3 +8,5 @@
 *.vscode/
 # Ignore files on nexus folder
 *nexus/
+# Ignore all files .env
+*.env
