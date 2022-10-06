@@ -1,10 +1,38 @@
+# docker-compose.yaml
 version: "3.7"
 
 networks:
   team-1-network:
-    driver: bridge
 
 services:
+  #Jenkins
+  jenkins:
+    image: jenkins/jenkins:lts
+    privileged: true
+    user: ${JENKINS_USER}
+    container_name: jenkins
+    volumes:
+      - jenkins_data:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - 8086:50000
+      - 8087:8080
+    networks:
+      - team-1-network
+    restart: on-failure
+    
+  #Sonatype/Nexus
+  nexus:
+    image: sonatype/nexus3
+    container_name: nexus
+    volumes:
+      - nexus-data:/nexus-data
+    ports:
+      - 8088:8081
+    networks:
+      - team-1-network
+    restart: on-failure
+  
   # DATABASE
   db:
     image: postgres:12
@@ -48,6 +76,7 @@ services:
       - "8081:9443"
     networks:
       - team-1-network
+      
 volumes:
   # SONARQUBE
   sonarqube_data:
@@ -58,3 +87,7 @@ volumes:
   postgresql_data:
   # PORTAINER
   portainer_data:
+  # NEXUS DATA
+  nexus-data:
+  # JENKINS
+  jenkins_data:

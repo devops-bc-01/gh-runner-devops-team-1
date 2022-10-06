@@ -14,7 +14,10 @@ Vagrant.configure("2") do |config|
       dockerConfig.vm.box = vm_docker['image']
       dockerConfig.vm.hostname = "devops-runner-team-1-#{i}"
       dockerConfig.vm.synced_folder ".", "/vagrant"
-      
+      #dockerConfig.vm.network "forwarded_port", guest: 8086, host: 9006  #Jenkins controller port (only used with inbound jenkins agents)
+      dockerConfig.vm.network "forwarded_port", guest: 8087 , host: 9007 #Jenkins
+      dockerConfig.vm.network "forwarded_port", guest: 8088, host: 9008  #Nexus sonatype
+
       dockerConfig.vm.provider :virtualbox do |vb|
         vb.gui = false
         vb.memory = vm_docker['ram']
@@ -46,6 +49,8 @@ Vagrant.configure("2") do |config|
 
       dockerConfig.vm.provision :docker
       dockerConfig.vm.provision :docker_compose
+
+      dockerConfig.vm.provision "shell", after: :docker_compose ,inline: "cd /vagrant && docker compose up -d", privileged: false
 
     end
   end
