@@ -1,0 +1,13 @@
+# Ignore `vagrant` files
+*.vagrant
+# Ignore `keys.json` token/key file
+/keys.json
+# Ignore `bin` dirs
+*/bin/*
+# Ignore files any .vscode/ files
+*.vscode/
+# Ignore all files .env
+*.env
+
+/.config
+/.local

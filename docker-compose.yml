@@ -1,0 +1,94 @@
+# docker-compose.yaml
+version: "3.7"
+
+networks:
+  team-1-network:
+
+services:
+  # SONARQUBE
+  sonarqube:
+    image: sonarqube:community
+    restart: on-failure
+    depends_on:
+      - db
+    environment:
+      SONAR_JDBC_URL: jdbc:postgresql://db:5432/sonar
+      SONAR_JDBC_USERNAME: ${SONAR_USER}
+      SONAR_JDBC_PASSWORD: ${SONAR_PASSWORD}
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+    ports:
+      - "8080:9000"
+    networks:
+      - team-1-network
+  
+  # PORTAINER
+  portainer:
+    image: portainer/portainer-ce:latest
+    restart: always
+    volumes:
+      - portainer_data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "8000:8000"
+      - "8081:9443"
+    networks:
+      - team-1-network
+  
+  # SONATYPE/NEXUS
+  nexus:
+    image: sonatype/nexus3
+    restart: always
+    container_name: nexus
+    volumes:
+      - nexus-data:/nexus-data
+    ports:
+      - 8082:8081
+    networks:
+      - team-1-network
+
+  # JENKINS
+  jenkins:
+    image: jenkins/jenkins:lts
+    restart: always
+    privileged: true
+    user: ${JENKINS_USER}
+    container_name: jenkins
+    volumes:
+      - jenkins_data:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - 8083:8080
+      - 8084:50000
+    networks:
+      - team-1-network
+  
+  # DATABASE
+  db:
+    image: postgres:12
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgresql:/var/lib/postgresql
+      - postgresql_data:/var/lib/postgresql/data
+    networks:
+      - team-1-network
+      
+volumes:
+  # SONARQUBE
+  sonarqube_data:
+  sonarqube_extensions:
+  sonarqube_logs:
+  # PORTAINER
+  portainer_data:
+  # NEXUS DATA
+  nexus-data:
+  # JENKINS
+  jenkins_data:
+  # DATABASE
+  postgresql:
+  postgresql_data:
