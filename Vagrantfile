@@ -7,6 +7,7 @@ Vagrant.configure("2") do |config|
 
   keys = File.read('./keys.json')
   parameters = JSON.parse(keys)
+  runner_variables = parameters['runner'] # Runner variables
 
   vm_docker = parameters['vm_docker']
   (1..vm_docker['node_count']).each do |i|
@@ -14,79 +15,78 @@ Vagrant.configure("2") do |config|
       dockerConfig.vm.box = vm_docker['image']
       dockerConfig.vm.hostname = "devops-runner-team-1-#{i}"
       dockerConfig.vm.synced_folder ".", "/vagrant"
-      #dockerConfig.vm.network "forwarded_port", guest: 8086, host: 9006  #Jenkins controller port (only used with inbound jenkins agents)
-      dockerConfig.vm.network "forwarded_port", guest: 8087 , host: 9007 #Jenkins
-      dockerConfig.vm.network "forwarded_port", guest: 8088, host: 9008  #Nexus sonatype
+      dockerConfig.ssh.extra_args = ["-t", "cd /vagrant; bash --login"] #Entering directly to /vagrant
+      
+      dockerConfig.vm.network :forwarded_port, host: "#{(4*i) + 8996}", guest: 8080 #Sonarqube -> docker-compose.yml for 
+      dockerConfig.vm.network :forwarded_port, host: "#{((4*i)+1) + 8996}", guest: 8081 #Portainer -> docker-compose.yml for 
+      dockerConfig.vm.network :forwarded_port, host: "#{((4*i)+2) + 8996}", guest: 8082 #Nexus sonatype
+      dockerConfig.vm.network :forwarded_port, host: "#{((4*i)+3) + 8996}", guest: 8083 #Jenkins
+      #dockerConfig.vm.network :forwarded_port, host: "#{(5*i)+4 + 8995}", guest: 8084 #Jenkins controller port (only used with inbound jenkins agents)
 
       dockerConfig.vm.provider :virtualbox do |vb|
         vb.gui = false
         vb.memory = vm_docker['ram']
         vb.cpus = vm_docker['cpus']
-
+        vb.customize ['modifyvm', :id, '--nested-hw-virt', 'on']
       end
       
-      # Installing docker and docker-compose
-      plugins_dependencies = %w( vagrant-docker-compose )
-      plugin_status = false
-      plugins_dependencies.each do |plugin_name|
-        unless Vagrant.has_plugin? plugin_name
-          print "  You dont have the neccesary plugins\n"
-          print "  Don't worry, installing...\n"
-          print "  ---------------------------------------------\n"
-
-          system("vagrant plugin install #{plugin_name}")
-          plugin_status = true
-          puts " #{plugin_name}  Dependencies installed"
-        end
-      end
-
-      # Restart Vagrant if any new plugin installed
-      if plugin_status === true
-        exec "vagrant #{ARGV.join' '}"
-      else
-        puts "All Plugin Dependencies allready installed"
+      dockerConfig.vm.provision "sonarqube", type: "shell" do |s| # Sonarqube settings for Elasticsearch
+        s.path= "sonarqube.sh"
       end
 
       dockerConfig.vm.provision :docker
-      dockerConfig.vm.provision :docker_compose
 
-      dockerConfig.vm.provision "shell", after: :docker_compose ,inline: "cd /vagrant && docker compose up -d", privileged: false
+      dockerConfig.vm.provision :docker_up, 
+        type: "shell", 
+        after: :docker,
+        inline: "cd /vagrant && docker compose up -d", 
+        privileged: false
 
+      dockerConfig.vm.provision "shell" do |s| # Runner shell
+        s.path= "github_runner_script.sh"
+        s.args= [
+          runner_variables["url"], 
+          runner_variables["hash"], 
+          runner_variables["repo"], 
+          runner_variables["token"], 
+          "devops-runner-team-1-docker-#{i}"
+        ]
+        s.privileged= false
+      end
     end
   end
 
   # PODMAN
   vm_podman = parameters['vm_podman']
   (1..vm_podman['node_count']).each do |i|
-    config.vm.network :forwarded_port, host: 9000, guest: 8080 # For Sonarqube -> docker-compose.yml for 
-    config.vm.network :forwarded_port, host: 9001, guest: 8081 # For Portainer -> docker-compose.yml for 
     
     config.vm.define "podman-#{i}" do |podmanConfig|
       podmanConfig.vm.box = vm_podman['image']
       podmanConfig.vm.hostname = "devops-runner-team-1-#{i}"
-      # TODO show alternatives of /home/vagrant
-      podmanConfig.vm.synced_folder ".", "/home/vagrant"
+      podmanConfig.vm.synced_folder ".", "/vagrant"
       
       podmanConfig.vm.provider :virtualbox do |vb|
         vb.gui = false
         vb.memory = vm_podman['ram']
         vb.cpus = vm_podman['cpus']
-        vb.customize ['modifyvm', :id, '--nested-hw-virt', 'on']
       end
 
-      podmanConfig.vm.provision :docker
-      #podmanConfig.vm.provision :podman
-      podmanConfig.vm.provision :docker_compose
-
-      podmanConfig.vm.provision "shell", inline: <<-SHELL
+      podmanConfig.vm.provision "shell", inline: <<-SHELL # Installing podman
+        sudo apt update
         sudo apt-get install -y podman
       SHELL
 
-      podmanConfig.vm.provision "sonarqube", type: "shell" do |s|
-        s.path= "sonarqube.sh"
+      podmanConfig.vm.provision "shell" do |s| # Runner shell
+        s.path= "github_runner_script.sh"
+        s.args= [
+          runner_variables["url"], 
+          runner_variables["hash"], 
+          runner_variables["repo"], 
+          runner_variables["token"], 
+          "devops-runner-team-1-podman-#{i}"
+        ]
+        s.privileged= false
       end
     end
   end
-
-
 end
