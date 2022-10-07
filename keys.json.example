@@ -1,9 +1,9 @@
 {
-    "vm_image": "ubuntu/jammy64",
-    
     "runner": {
+        "url": "",
         "repo": "",
-        "token": ""
+        "token": "",
+        "hash": ""
     },
 
     "vm_docker":{
@@ -15,8 +15,8 @@
 
     "vm_podman":{
         "node_count": 1,
-        "ram": "",
-        "cpus": "",
+        "ram": "1024",
+        "cpus": "1",
         "image": "ubuntu/jammy64"
     }
 }
